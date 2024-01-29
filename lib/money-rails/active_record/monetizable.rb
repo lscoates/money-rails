@@ -210,7 +210,11 @@ module MoneyRails
           end
         elsif amount.present?
           # If amount is NOT nil (or empty string) load the amount in a Money
-          amount = Money.new(amount, attr_currency)
+          amount = if subunit_name.include?("_cents")
+            Money.new(amount, attr_currency)
+          else
+            Money.from_amount(amount, attr_currency)
+          end
 
           # Cache the value (it may be nil)
           result = instance_variable_set("@#{name}", amount)
@@ -260,8 +264,10 @@ module MoneyRails
           # can't tell if the attribute was aliased.)
           original_name = self.class.attribute_aliases[subunit_name.to_s]
           write_attribute(original_name, money.try(:cents))
-        else
+        elsif subunit_name.include?("_cents")
           write_attribute(subunit_name, money.try(:cents))
+        else
+          write_attribute(subunit_name, money.try(:amount))
         end
 
         if money_currency = money.try(:currency)
