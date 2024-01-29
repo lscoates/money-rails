@@ -1,6 +1,6 @@
-require 'active_support/concern'
-require 'active_support/core_ext/array/extract_options'
-require 'active_support/deprecation/reporting'
+require "active_support/concern"
+require "active_support/core_ext/array/extract_options"
+require "active_support/deprecation/reporting"
 
 module MoneyRails
   module ActiveRecord
@@ -47,7 +47,7 @@ module MoneyRails
                 raise ArgumentError, "monetizable attribute name cannot be the same as options[:as] parameter"
               end
 
-            elsif subunit_name =~ /#{MoneyRails::Configuration.amount_column[:postfix]}$/
+            elsif /#{MoneyRails::Configuration.amount_column[:postfix]}$/.match?(subunit_name)
               name = subunit_name.sub(/#{MoneyRails::Configuration.amount_column[:postfix]}$/, "")
             else
               raise ArgumentError, "Unable to infer the name of the monetizable attribute for '#{subunit_name}'. " \
@@ -65,7 +65,7 @@ module MoneyRails
               instance_currency_name = "#{name}#{MoneyRails::Configuration.currency_column[:postfix]}"
             end
 
-            instance_currency_name = instance_currency_name && instance_currency_name.to_s
+            instance_currency_name &&= instance_currency_name.to_s
 
             # This attribute allows per column currency values
             # Overrides row and default currency
@@ -110,12 +110,11 @@ module MoneyRails
               # Allow only Money objects or Numeric values!
               if (numericality = options.fetch(:numericality, true))
                 validates name.to_sym, {
-                  allow_nil: options[:allow_nil],
-                  'money_rails/active_model/money' => numericality
+                  :allow_nil => options[:allow_nil],
+                  "money_rails/active_model/money" => numericality
                 }
               end
             end
-
 
             # Getter for monetized attribute
             define_method name do |*args, **kwargs|
@@ -235,18 +234,16 @@ module MoneyRails
         # Use nil or get a Money object
         if options[:allow_nil] && value.blank?
           money = nil
+        elsif value.is_a?(Money)
+          money = value
         else
-          if value.is_a?(Money)
-            money = value
-          else
-            begin
-              money = value.to_money(public_send("currency_for_#{name}"))
-            rescue NoMethodError
-              return nil
-            rescue Money::Currency::UnknownCurrency, Monetize::ParseError => e
-              raise MoneyRails::Error, e.message if MoneyRails.raise_error_on_money_parsing
-              return nil
-            end
+          begin
+            money = value.to_money(public_send("currency_for_#{name}"))
+          rescue NoMethodError
+            return nil
+          rescue Money::Currency::UnknownCurrency, Monetize::ParseError => e
+            raise MoneyRails::Error, e.message if MoneyRails.raise_error_on_money_parsing
+            return nil
           end
         end
 
